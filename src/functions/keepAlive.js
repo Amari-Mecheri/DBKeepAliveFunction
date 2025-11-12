@@ -26,7 +26,7 @@ const HEAVY_WARMUP_INTERVAL = (() => {
 })();
 
 app.timer('keepAlive', {
-  schedule: '0 * * * * *',
+  schedule: '0 */3 * * * *',
   handler: async (_myTimer, context) => {
     if (!HTTP_TRIGGER_URL) {
       context.log.error('❌ Missing HTTP_TRIGGER_URL');
