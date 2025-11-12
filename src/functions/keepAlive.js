@@ -26,7 +26,7 @@ const HEAVY_WARMUP_INTERVAL = (() => {
 })();
 
 app.timer('keepAlive', {
-  schedule: '0 */3 * * * *',
+  schedule: '0 * * * * *',
   handler: async (_myTimer, context) => {
     if (!HTTP_TRIGGER_URL) {
       context.log.error('❌ Missing HTTP_TRIGGER_URL');
@@ -37,6 +37,11 @@ app.timer('keepAlive', {
     const email = isHeavy ? DB_WARMUP_EMAIL : LIGHT_WARMUP_EMAIL;
     const mode = isHeavy ? 'FULL (API+DB)' : 'LIGHT (API only)';
     const start = Date.now();
+
+    if(!isHeavy) {
+      context.log(`🔆 Performed ${mode} warmup...`);
+      return;
+    };
 
     try {
       await axios.post(HTTP_TRIGGER_URL, { email }, {
