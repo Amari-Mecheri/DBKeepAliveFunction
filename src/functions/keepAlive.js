@@ -1,14 +1,12 @@
 // keepAlive.js
 
 const { app } = require('@azure/functions');
-const axios = require = require('axios'); // Note: L'utilisation de require('axios') est correcte
+const axios = require('axios'); 
 
 const HTTP_FUNCTION_URL = process.env.HTTP_TRIGGER_URL; 
 const DB_WARMUP_EMAIL = 'warmup-system@artificialbug.com'; 
-// Invalid e-mail that will be rejected by the WaitList function (!email.includes('@'))
 const LIGHT_WARMUP_EMAIL = 'ping-api-only';
 
-// defaults to 5 minutes if no env var set or if set to less than 2
 const HEAVY_WARMUP_INTERVAL = ((interval = parseInt(process.env.WARMUP_INTERVAL_MINUTES, 10)) >= 2 ? interval : 5);
 
 app.timer('keepAlive', {
@@ -31,9 +29,14 @@ app.timer('keepAlive', {
         context.log(`🔥 Warmup ${mode} started: ${HTTP_FUNCTION_URL}. Heavy interval configured: ${HEAVY_WARMUP_INTERVAL} min.`);
 
         try {
-            // AUCUN TIMEOUT EXPLICITE D'AXIOS. La durée sera contrôlée par le timeout de 60s de la DB.
             const response = await axios.post(HTTP_FUNCTION_URL, {
                 email: emailToSend
+            }, {
+                // IMPORTANT: Tell axios status 400 is not an error for our light warmup check (otherwise it throws)
+                validateStatus: (status) => {
+                    // Accept 2xx and 400
+                    return (status >= 200 && status < 300) || status === 400; 
+                }
             });
             
             const duration = Date.now() - startTime;
@@ -46,16 +49,16 @@ app.timer('keepAlive', {
                      context.log.error(`⚠️ FAILED Full Warmup. Status: ${response.status}. Message: ${response.data.message}`);
                 }
             } else {
-                // Light Warmup (expecting validation error status 400)
-                if (response.status === 400 && !response.data.success && response.data.message === 'Invalid email address') {
-                    context.log(`⚡ SUCCESSFUL Light Warmup in ${duration}ms. (API warmed, validation OK)`);
+                // Light Warmup (expecting status 400)
+                if (response.status === 400) {
+                    context.log(`⚡ SUCCESSFUL Light Warmup in ${duration}ms. (API warmed up)`);
                 } else {
-                    context.log.error(`⚠️ FAILED Light Warmup: Unexpected Status. Status: ${response.status}. Message: ${response.data.message || 'No message'}`);
+                    context.log.error(`⚠️ FAILED Light Warmup: Unexpected Status. Expected 400, got ${response.status}. Message: ${response.data.message || 'No message'}`);
                 }
             }
 
         } catch (error) {
-            // Le seul risque est un échec de connexion (DNS, 404, etc.) ou un timeout côté réseau de l'hôte.
+            // This catch block handles genuine connection errors (5xx, timeout, network failure).
             context.log.error(`❌ Warmup ${mode} FAILED. Error:`, error.message);
             throw error; 
         }
