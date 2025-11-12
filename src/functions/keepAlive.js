@@ -29,37 +29,45 @@ app.timer('keepAlive', {
         context.log(`🔥 Warmup ${mode} started: ${HTTP_FUNCTION_URL}. Heavy interval configured: ${HEAVY_WARMUP_INTERVAL} min.`);
 
         try {
+            // No validateStatus needed. Axios will throw for 400, which we handle below.
             const response = await axios.post(HTTP_FUNCTION_URL, {
                 email: emailToSend
-            }, {
-                // IMPORTANT: Tell axios status 400 is not an error for our light warmup check (otherwise it throws)
-                validateStatus: (status) => {
-                    // Accept 2xx and 400
-                    return (status >= 200 && status < 300) || status === 400; 
-                }
             });
             
             const duration = Date.now() - startTime;
             
+            // If we are here, the status must be 2xx. This should only happen for FULL Warmup.
             if (isHeavyWarmup) {
-                // Full Warmup (expecting status 200)
                 if (response.status === 200 && response.data.success) {
                      context.log(`✅ Complete service chain (${mode}) warmed up in ${duration}ms. Message: ${response.data.message}`);
                 } else {
                      context.log.error(`⚠️ FAILED Full Warmup. Status: ${response.status}. Message: ${response.data.message}`);
                 }
             } else {
-                // Light Warmup (expecting status 400)
-                if (response.status === 400) {
-                    context.log(`⚡ SUCCESSFUL Light Warmup in ${duration}ms. (API warmed up)`);
-                } else {
-                    context.log.error(`⚠️ FAILED Light Warmup: Unexpected Status. Expected 400, got ${response.status}. Message: ${response.data.message || 'No message'}`);
-                }
+                // CRITICAL FAIL: Light Warmup should NEVER return 2xx (validation failed).
+                context.log.error(`⚠️ FAILED Light Warmup: Unexpected Success Status (${response.status}). Validation logic was skipped.`);
             }
 
         } catch (error) {
-            // This catch block handles genuine connection errors (5xx, timeout, network failure).
+            
+            const duration = Date.now() - startTime;
+            
+            // ----------------------------------------------------
+            // CRITICAL CHECK FOR LIGHT WARMUP SUCCESS (Expected 400)
+            // ----------------------------------------------------
+            if (!isHeavyWarmup && error.response && error.response.status === 400) {
+                // This is the SUCCESSFUL path for the Light Warmup.
+                context.log(`⚡ SUCCESSFUL Light Warmup in ${duration}ms. (API warmed up)`);
+                
+                // IMPORTANT: We exit the function successfully here.
+                return; 
+            }
+            // ----------------------------------------------------
+            
+            // If we reach here, it's a genuine failure for either mode (5xx, timeout, network error).
             context.log.error(`❌ Warmup ${mode} FAILED. Error:`, error.message);
+            
+            // Re-throw the error to signal the Azure Functions host to mark the invocation as 'Failed'.
             throw error; 
         }
     }
