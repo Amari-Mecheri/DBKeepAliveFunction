@@ -4,8 +4,8 @@
  * to keep the function warm (cold start mitigation).
  */
 
-const { app } = require('@azure/functions');
-const axios = require('axios');
+import { app } from '@azure/functions';
+import { post } from 'axios';
 
 const HTTP_TRIGGER_URL = process.env.HTTP_TRIGGER_URL;
 const DUMMY_EMAIL = 'keepalive'; // invalide, déclenche HTTP 400
@@ -21,7 +21,7 @@ app.timer('keepAlive', {
     const start = Date.now();
 
     try {
-      await axios.post(HTTP_TRIGGER_URL, { email: DUMMY_EMAIL }, {
+      await post(HTTP_TRIGGER_URL, { email: DUMMY_EMAIL }, {
         timeout: 30_000,
         validateStatus: status => status === 400 // attendu pour email invalide
       });
