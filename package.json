@@ -2,13 +2,13 @@
   "name": "dbkeepalivefunction",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "scripts": {
     "start": "func start",
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
     "@azure/functions": "^4.0.0",
-    "mssql": "^12.1.0",
     "axios": "^1.6.8"
   },
   "devDependencies": {},
