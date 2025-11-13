@@ -19,7 +19,7 @@ app.timer('keepAlive', {
   
     if (skipCount > 0) {
       skipCount--;
-      context.log(`⏭️ Skipping ping. Backoff in effect (${consecutiveFailures} min interval). Skips remaining: ${skipCount}.`);
+      context.log(`⏭️ Skipping ping. Backoff in effect (${consecutiveFailures+1} min interval). Skips remaining: ${skipCount}.`);
       return;
     }
     
