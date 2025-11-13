@@ -2,6 +2,7 @@
   "name": "dbkeepalivefunction",
   "version": "1.0.0",
   "description": "",
+  "type": "module",  
   "scripts": {
     "start": "func start",
     "test": "echo \"No tests yet...\""
@@ -11,5 +12,5 @@
     "axios": "^1.6.8"
   },
   "devDependencies": {},
-  "main": "src/{index.js,functions/*.js}"
+  "main": "src/index.js" 
 }
